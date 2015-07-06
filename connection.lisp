@@ -76,11 +76,11 @@
                    (loop for i from 0 to num-fields
                          collect (let ((mref (mysql-fetch-field mysql-res)))
                                    (list
-                                    (foreign-slot-value mref 'mysql-field 'name)
+                                    (foreign-slot-value mref '(:struct mysql-field) 'name)
                                     (foreign-enum-keyword
                                      'enum-field-types
-                                     (foreign-slot-value mref 'mysql-field 'type))
-                                    (foreign-slot-value mref 'mysql-field 'flags))))))
+                                     (foreign-slot-value mref '(:struct mysql-field) 'type))
+                                    (foreign-slot-value mref '(:struct mysql-field) 'flags))))))
             (setf (result-set-fields self)
                   (append
                    (list extracted-fields)

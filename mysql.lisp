@@ -309,12 +309,12 @@
   "Returns the character set information for the connection as a sequence:
       (collation name number state)"
   (with-connection (conn database)
-    (with-foreign-object (charset 'character-set)
+    (with-foreign-object (charset '(:struct character-set))
       (mysql-get-character-set-info (pointer conn) charset)
-      (list (foreign-slot-value charset 'character-set 'csname)
-            (foreign-slot-value charset 'character-set 'name)
-            (foreign-slot-value charset 'character-set 'number)
-            (foreign-slot-value charset 'character-set 'state)))))
+      (list (foreign-slot-value charset '(:struct character-set) 'csname)
+            (foreign-slot-value charset '(:struct character-set) 'name)
+            (foreign-slot-value charset '(:struct character-set) 'number)
+            (foreign-slot-value charset '(:struct character-set) 'state)))))
 
 (defun set-character-set (csname &key database)
   (with-connection (conn database)

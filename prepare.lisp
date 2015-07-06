@@ -46,13 +46,13 @@
     (if (> index (1- (nargs self)))
         (error 'cl-mysql-error
                :message (format nil "Index: ~D is out of range on this statement." index)))
-    (cffi:mem-aref (args self) 'mysql-bind index)))
+    (cffi:mem-aptr (args self) '(:struct mysql-bind) index)))
 
 (defgeneric configure-bindings (self nargs)
   (:method ((self statement) nargs)
     "Sets up a statement object ready to receive nargs bindings"
     (setf (slot-value self 'nargs) nargs
-          (slot-value self 'args) (cffi:foreign-alloc 'mysql-bind :count nargs)
+          (slot-value self 'args) (cffi:foreign-alloc '(:struct mysql-bind) :count nargs)
           (slot-value self 'bound-map) (make-array nargs :initial-element nil))))
 
 (defun prepare (query &key (database *last-database*))
@@ -109,7 +109,7 @@
     (when (bound-parameter-p self index)
       (let ((arg (bind-arg self index)))
         (dolist (slot '(buffer is-null length error))
-          (foreign-free (foreign-slot-value arg 'mysql-bind slot)))))))
+          (foreign-free (foreign-slot-value arg '(:struct mysql-bind) slot)))))))
 
 (defgeneric close-statement (self)
   (:method ((self statement))
@@ -135,21 +135,21 @@
       (release-binding self index)
       (let ((arg (bind-arg self index))
             (c-type (gethash sql-type *stmt-ctype-map*)))
-        (setf (foreign-slot-value arg 'mysql-bind 'buffer)
+        (setf (foreign-slot-value arg '(:struct mysql-bind) 'buffer)
               (cond ((eq :string c-type)
                      (foreign-alloc :char :count max-len))
                     (t (foreign-alloc c-type))))
 
-        (setf (foreign-slot-value arg 'mysql-bind 'buffer-type)
+        (setf (foreign-slot-value arg '(:struct mysql-bind) 'buffer-type)
               (foreign-enum-value 'enum-field-types sql-type)
 
-              (foreign-slot-value arg 'mysql-bind 'length)
+              (foreign-slot-value arg '(:struct mysql-bind) 'length)
               (foreign-alloc :int)
 
-              (foreign-slot-value arg 'mysql-bind 'is-null)
+              (foreign-slot-value arg '(:struct mysql-bind) 'is-null)
               (foreign-alloc :char)
 
-              (foreign-slot-value arg 'mysql-bind 'error)
+              (foreign-slot-value arg '(:struct mysql-bind) 'error)
               (foreign-alloc :char)
 
               ;; Mark this argument as bound
@@ -183,7 +183,7 @@
 
     (let* ((arg (bind-arg self index))
            (buffer-type (foreign-enum-keyword 'enum-field-types
-                                              (foreign-slot-value arg 'mysql-bind 'buffer-type)))
+                                              (foreign-slot-value arg '(:struct mysql-bind) 'buffer-type)))
            (buffer-c-type (gethash buffer-type *stmt-ctype-map*))
            (type-adjusted-value (typecase value
                                   (string (format nil "~A" value))
@@ -191,19 +191,19 @@
            (is-null (if value 0 1)))
       (if (eq :string buffer-c-type)
           (lisp-string-to-foreign type-adjusted-value
-                                  (foreign-slot-value arg 'mysql-bind 'buffer)
+                                  (foreign-slot-value arg '(:struct mysql-bind) 'buffer)
                                   *default-sequence-length*)
-          (setf (mem-ref (foreign-slot-value arg 'mysql-bind 'buffer)
+          (setf (mem-ref (foreign-slot-value arg '(:struct mysql-bind) 'buffer)
                          buffer-c-type) type-adjusted-value))
 
-      (setf (mem-ref (foreign-slot-value arg 'mysql-bind 'is-null) :char)
+      (setf (mem-ref (foreign-slot-value arg '(:struct mysql-bind) 'is-null) :char)
             is-null
 
-            (mem-ref (foreign-slot-value arg 'mysql-bind 'length) :int)
-            (cffi-utf8-length (foreign-slot-value arg 'mysql-bind 'buffer))
+            (mem-ref (foreign-slot-value arg '(:struct mysql-bind) 'length) :int)
+            (cffi-utf8-length (foreign-slot-value arg '(:struct mysql-bind) 'buffer))
 
-            (foreign-slot-value arg 'mysql-bind 'buffer-length)
-            (cffi-utf8-length (foreign-slot-value arg 'mysql-bind 'buffer))))))
+            (foreign-slot-value arg '(:struct mysql-bind) 'buffer-length)
+            (cffi-utf8-length (foreign-slot-value arg '(:struct mysql-bind) 'buffer))))))
 
 (defgeneric execute (self &rest args)
   (:method ((self statement) &rest args)

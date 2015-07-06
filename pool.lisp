@@ -232,9 +232,8 @@
     ;; Now clean up any stateful data that could be hanging around
     (setf (result-set self) (null-pointer)
           (result-set-fields self) nil
-          (in-use self) nil)))
+          (in-use self) nil))
 
-(defgeneric return-to-available (self &optional conn)
   (:method ((self connection-pool) &optional conn)
     "If the connection is not in the expected state raise an error."
     (if (or (not (in-use conn))

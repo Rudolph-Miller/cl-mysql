@@ -64,8 +64,8 @@
   (is (null (aquire (make-instance 'connection :in-use t) nil)))
   (is (aquire (make-instance 'connection :in-use nil) nil))
   (is (handler-case (progn (aquire nil nil) nil)
-	(cl-mysql-error (c) t)
-	(error (c) nil))))
+        (cl-mysql-error () t)
+        (error () nil))))
 
 (deftest test-count-connections-directly ()
   "There will, from time-to-time be NILs in the arrays so we better make sure

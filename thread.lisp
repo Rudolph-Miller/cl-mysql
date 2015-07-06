@@ -24,7 +24,7 @@
 ;;;;
 (in-package "CL-MYSQL-SYSTEM")
 
-(defconstant *sleep-period* 0.1)
+(defvar *sleep-period* 0.1)
 
 ;;; Copied from bordeaux threads
 (eval-when (:compile-toplevel :load-toplevel :execute)
@@ -56,6 +56,7 @@
   #+(and clisp mt) (mt:make-exemption))
 
 (defun thread-alive-p (thread)
+  (declare (ignorable thread))
   #+ecl (mp:process-active-p thread)
   #+armedbear (ext:thread-alive-p thread)
   #- (or ecl sb-thread allegro (and clisp mt)) nil)

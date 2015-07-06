@@ -72,7 +72,6 @@
           (setf (result-set-fields self)
                 (append (list nil) (result-set-fields self)))
           (let* ((num-fields (1- (mysql-num-fields mysql-res)))
-                 (fields (mysql-fetch-fields mysql-res))
                  (extracted-fields
                    (loop for i from 0 to num-fields
                          collect (let ((mref (mysql-fetch-field mysql-res)))

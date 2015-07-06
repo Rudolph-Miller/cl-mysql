@@ -59,9 +59,9 @@
 (deftest test-string-to-date ()
   (is (eq nil (string-to-date nil)))
   (is (eq nil (string-to-date "")))
-  (multiple-value-bind (h m s day mon year)
-      (decode-universal-time (string-to-date "2009-01-01"))
-    (is (and (eql 0 h) (eql 0 m) (eql 0 s) (eql 1 day) (eql 1 mon) (eql 2009 year))))
+  (multiple-value-bind (s m h day mon year)
+      (decode-universal-time (string-to-date "2009-01-01") 0)
+    (is (and (eql 0 s) (eql 0 m) (eql 0 h) (eql 1 day) (eql 1 mon) (eql 2009 year))))
   ;; Not sure how much it is worth investing in testing MySQL return values
   (is (eq nil (string-to-date "2009-1-1"))))
 

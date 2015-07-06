@@ -188,11 +188,7 @@
            (type-adjusted-value (typecase value
                                   (string (format nil "~A" value))
                                   (t value)))
-           (is-null (if value 0 1))
-           #+(or)
-           (length (typecase value
-                     (string (length type-adjusted-value))
-                     (t 0))))
+           (is-null (if value 0 1)))
       (if (eq :string buffer-c-type)
           (lisp-string-to-foreign type-adjusted-value
                                   (foreign-slot-value arg 'mysql-bind 'buffer)

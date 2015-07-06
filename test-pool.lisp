@@ -215,3 +215,16 @@
                                 (1+ (random 2))))))
     (cl-mysql-system:wait-on-threads threads)
     (is (eql 50 (caaaar (query "SELECT COUNT(*) FROM X" :database *conn*))))))
+
+#+thread-support
+(deftest test-thread4 ()
+  "Testing destroy-thread works well. (ref https://github.com/hackinghat/cl-mysql/issues/7)"
+  (let* ((pool (connect :host *host* :user *user* :password *password*))
+         (thread (bt:make-thread (lambda () (loop)))))
+    ;; At first, thread is alive.
+    (is (bt:thread-alive-p thread))
+    (bt:destroy-thread thread)
+    (sleep 1)
+    ;; Thread should not be alive.
+    (is (null (bt:thread-alive-p thread)))
+    (disconnect pool)))

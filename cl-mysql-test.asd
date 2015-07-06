@@ -24,7 +24,8 @@
 ;;;;
 (asdf:defsystem #:cl-mysql-test
   :depends-on (#:cl-mysql
-               #:stefil)
+               #:stefil
+               #:bordeaux-threads)
   :components ((:file "test")
                (:file "test-pool")
                (:file "test-prepare")

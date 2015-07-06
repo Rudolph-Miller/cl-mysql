@@ -32,7 +32,7 @@
 (in-root-suite)
 
 (defparameter *host* "localhost")
-(defparameter *user* nil)
+(defparameter *user* "root")
 (defparameter *password* nil)
 
 (defsuite* test)

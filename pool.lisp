@@ -50,93 +50,103 @@
    (wait-queue :accessor wait-queue :initform (make-wait-resource)))
   (:documentation "All connections are initiated through a pool. "))
 
-(defmethod (setf max-connections) ((max-connect number) (pool connection-pool))
-  "Change the maximum number of connections available in the pool.   Note
-   that you can change this value whilst the pool is waiting for a connection
-   to become available."
-  (with-lock (pool-lock pool)
-    (setf (slot-value pool 'max-connections) max-connect))
-  (pool-notify pool))
+(defgeneric (setf max-connections)  (max-connections pool)
+  (:method ((max-connect number) (pool connection-pool))
+    "Change the maximum number of connections available in the pool.   Note
+     that you can change this value whilst the pool is waiting for a connection
+     to become available."
+    (with-lock (pool-lock pool)
+      (setf (slot-value pool 'max-connections) max-connect))
+    (pool-notify pool)))
 
-(defmethod (setf min-connections) ((min-connect number) (pool connection-pool))
-  "Change the minimum number of connections available in the pool.   Note
-   that you can change this value whilst the pool is waiting for a connection
-   to become available."
-  (with-lock (pool-lock pool)
-    (setf (slot-value pool 'min-connections) min-connect))
-  (pool-notify pool))
+(defgeneric (setf min-connections) (min-connections pool)
+  (:method ((min-connect number) (pool connection-pool))
+    "Change the minimum number of connections available in the pool.   Note
+     that you can change this value whilst the pool is waiting for a connection
+     to become available."
+    (with-lock (pool-lock pool)
+      (setf (slot-value pool 'min-connections) min-connect))
+    (pool-notify pool)))
 
-(defmethod add-connection ((self connection-pool) (conn connection))
-  "Add a connection into the pool."
-  (vector-push-extend conn (connections self))
-  (vector-push-extend conn (available-connections self))
-  (pool-notify self))
+(defgeneric add-connection (self pool)
+  (:method ((self connection-pool) (conn connection))
+    "Add a connection into the pool."
+    (vector-push-extend conn (connections self))
+    (vector-push-extend conn (available-connections self))
+    (pool-notify self)))
 
-(defmethod remove-connection-from-array ((self connection-pool) array conn)
-  "Returns a new array with the given connection object removed (set to NIL)
-   The pool should be locked before this method is called."
-  (unless (null conn)
-    (map-into array
-	      (lambda (x)
-		(if (connection-equal conn x)
-		    nil
-		    x))
-	      array))
-  (clean-connections self array))
+(defgeneric remove-connection-from-array (self array conn)
+  (:method ((self connection-pool) array conn)
+    "Returns a new array with the given connection object removed (set to NIL)
+     The pool should be locked before this method is called."
+    (unless (null conn)
+      (map-into array
+                (lambda (x)
+                  (if (connection-equal conn x)
+                      nil
+                      x))
+                array))
+    (clean-connections self array)))
 
-(defmethod connect-to-server ((self connection-pool))
-  "Create a new single connection and add it to the pool."
-  (let* ((mysql (mysql-init (null-pointer)))
-	 (connection (mysql-real-connect mysql
-					 (or (hostname self) "localhost")
-					 (or (username self) (null-pointer))
-					 (or (password self) (null-pointer))
-					 (or (database self) (null-pointer))
-					 (or (port self) 0)
-					 (or (socket self) (null-pointer))
-					 (flags self))))
-    (error-if-null mysql connection)
-    (add-connection self (make-instance 'connection
-					:pointer  connection
-					:owner-pool self
-					:in-use nil))))
+(defgeneric connect-to-server (self)
+  (:method ((self connection-pool))
+    "Create a new single connection and add it to the pool."
+    (let* ((mysql (mysql-init (null-pointer)))
+           (connection (mysql-real-connect mysql
+                                           (or (hostname self) "localhost")
+                                           (or (username self) (null-pointer))
+                                           (or (password self) (null-pointer))
+                                           (or (database self) (null-pointer))
+                                           (or (port self) 0)
+                                           (or (socket self) (null-pointer))
+                                           (flags self))))
+      (error-if-null mysql connection)
+      (add-connection self (make-instance 'connection
+                                          :pointer  connection
+                                          :owner-pool self
+                                          :in-use nil)))))
 
-(defmethod disconnect-from-server ((self connection)  conn)
-  (disconnect-from-server (owner-pool self) (or conn self)))
+(defgeneric disconnect-from-server (self conn)
+  (:method ((self connection) conn)
+    (disconnect-from-server (owner-pool self) (or conn self)))
 
-(defmethod disconnect-from-server ((self connection-pool) (conn connection))
-  "Internal method.   Pool should be locked before-hand. "
-  (remove-connection-from-array self (available-connections self) conn)
-  (remove-connection-from-array self (connections self) conn)
-  (mysql-close (pointer conn)))
+  (:method ((self connection-pool) (conn connection))
+    "Internal method.   Pool should be locked before-hand. "
+    (remove-connection-from-array self (available-connections self) conn)
+    (remove-connection-from-array self (connections self) conn)
+    (mysql-close (pointer conn))))
 
-(defmethod count-connections ((self connection-pool))
-  "Count the number of connections in the pool.   If you are dynamically 
-   changing the size of the pool after it is created this number could be 
-   greater or less than  max/min connections.   Set :available-only if you 
-   only want to know how many connections are currently ready to use."
-  ;; Mutex
-  (values
-   (count-if #'identity (connections self))
-   (count-if #'identity (available-connections self))))
+(defgeneric count-connections (self)
+  (:method ((self connection-pool))
+    "Count the number of connections in the pool.   If you are dynamically 
+     changing the size of the pool after it is created this number could be 
+     greater or less than  max/min connections.   Set :available-only if you 
+     only want to know how many connections are currently ready to use."
+    ;; Mutex
+    (values
+     (count-if #'identity (connections self))
+     (count-if #'identity (available-connections self)))))
 
-(defmethod can-aquire ((self connection-pool))
-  "Returns true if a call to aquire would result in a connection being allocated"
-  (multiple-value-bind (total available)
-      (count-connections self)
-    (or (> available 0) (< total (max-connections self)))))
+(defgeneric can-aquire (self)
+  (:method ((self connection-pool))
+    "Returns true if a call to aquire would result in a connection being allocated"
+    (multiple-value-bind (total available)
+        (count-connections self)
+      (or (> available 0) (< total (max-connections self))))))
 
-(defmethod can-aquire-lock ((self connection-pool))
-  (with-lock (pool-lock self)
-    (can-aquire self)))
+(defgeneric can-aquire-lock (self)
+  (:method ((self connection-pool))
+    (with-lock (pool-lock self)
+      (can-aquire self))))
 
-(defmethod connect-upto-minimum ((self connection-pool) n min)
-  "We use this method to allocate up to the minimum number of connections.
-   It is called once after initialize-instance and will be called again every 
-   time a connection is acquired from the pool."
-  ;; Mutex
-  (loop for i from 0 to (1- (- min n))
-        do (connect-to-server self)))
+(defgeneric connect-upto-minimum (self n min)
+  (:method ((self connection-pool) n min)
+    "We use this method to allocate up to the minimum number of connections.
+     It is called once after initialize-instance and will be called again every 
+     time a connection is acquired from the pool."
+    ;; Mutex
+    (loop for i from 0 to (1- (- min n))
+          do (connect-to-server self))))
 
 (defmethod initialize-instance :after ((self connection-pool) &rest initargs)
   "The connection arrays need to be set-up after the pool is created."
@@ -151,32 +161,33 @@
   (connect-upto-minimum self  0 (min-connections self)))
 
 
-(defmethod take-first ((self connection-pool))
-  "Take the first available connection from the pool.   If there are none, 
-   NIL is returned."
-  (with-lock (pool-lock self)
-    ;; If we can't aquire a connection return nil 
-    (if (not (can-aquire self))
-        (return-from take-first nil))
-    
-    ;; We can aquire but it might be because the max-number of connections
-    ;; has changed so connect up to the minimum required to service this
-    ;; request.
-    (multiple-value-bind (total available) (count-connections self)
-      (connect-upto-minimum self total
-                            (if (> available 0)
-                                (min-connections self)
-                                (min (max-connections self)
-                                     (1+ total)))))
-    ;; There now must be a connection available in the pool, so find the
-    ;; first one and lock it.
-    (let ((first (loop for conn across (connections self)
-                       if (and conn (available conn))
-                         return conn)))
-      (toggle first)
-      (remove-connection-from-array self (available-connections self) first)
-      (clean-connections self (available-connections self))
-      (values first))))
+(defgeneric take-first (self)
+  (:method ((self connection-pool))
+    "Take the first available connection from the pool.   If there are none, 
+     NIL is returned."
+    (with-lock (pool-lock self)
+      ;; If we can't aquire a connection return nil 
+      (if (not (can-aquire self))
+          (return-from take-first nil))
+      
+      ;; We can aquire but it might be because the max-number of connections
+      ;; has changed so connect up to the minimum required to service this
+      ;; request.
+      (multiple-value-bind (total available) (count-connections self)
+        (connect-upto-minimum self total
+                              (if (> available 0)
+                                  (min-connections self)
+                                  (min (max-connections self)
+                                       (1+ total)))))
+      ;; There now must be a connection available in the pool, so find the
+      ;; first one and lock it.
+      (let ((first (loop for conn across (connections self)
+                         if (and conn (available conn))
+                           return conn)))
+        (toggle first)
+        (remove-connection-from-array self (available-connections self) first)
+        (clean-connections self (available-connections self))
+        (values first)))))
 
 (defmethod aquire ((self t) (block t))
   (error 'cl-mysql-error :message "There is no available pool to aquire from!"))
@@ -207,62 +218,68 @@
     ;; Block on in-use?
     self))
 
-(defmethod contains ((self connection-pool) array conn)
-  (loop for c across array
-        if (connection-equal c conn)
-          return t))
+(defgeneric contains (self array conn)
+  (:method ((self connection-pool) array conn)
+    (loop for c across array
+          if (connection-equal c conn)
+            return t)))
 
-(defmethod return-to-available ((self connection) &optional conn)
-  (declare (ignore conn))
-  ;; Deal with the pool
-  (return-to-available (owner-pool self) self)
-  ;; Now clean up any stateful data that could be hanging around
-  (setf (result-set self) (null-pointer)
-        (result-set-fields self) nil
-        (in-use self) nil))
+(defgeneric return-to-available (self &optional conn)
+  (:method ((self connection) &optional conn)
+    (declare (ignore conn))
+    ;; Deal with the pool
+    (return-to-available (owner-pool self) self)
+    ;; Now clean up any stateful data that could be hanging around
+    (setf (result-set self) (null-pointer)
+          (result-set-fields self) nil
+          (in-use self) nil)))
 
-(defmethod return-to-available ((self connection-pool) &optional conn)
-  "If the connection is not in the expected state raise an error."
-  (if (or (not (in-use conn))
-          (contains self (available-connections self) conn))
-      (error 'cl-mysql-error :message
-             "Inconsistent state! Connection is not currently in use."))
-  (vector-push-extend conn (available-connections self)))
+(defgeneric return-to-available (self &optional conn)
+  (:method ((self connection-pool) &optional conn)
+    "If the connection is not in the expected state raise an error."
+    (if (or (not (in-use conn))
+            (contains self (available-connections self) conn))
+        (error 'cl-mysql-error :message
+               "Inconsistent state! Connection is not currently in use."))
+    (vector-push-extend conn (available-connections self))))
 
-(defmethod clean-connections ((self connection-pool) array)
-  "Housekeeping to remove null connections from the end of the connections 
-   array.   Pool should be locked."
-  (setf (fill-pointer array)
-        (do ((i (1- (fill-pointer array)) (decf i)))
-            ((or (< i 0) (elt array i)) (1+ i)))))
+(defgeneric clean-connections (self array)
+  (:method ((self connection-pool) array)
+    "Housekeeping to remove null connections from the end of the connections 
+     array.   Pool should be locked."
+    (setf (fill-pointer array)
+          (do ((i (1- (fill-pointer array)) (decf i)))
+              ((or (< i 0) (elt array i)) (1+ i))))))
 
-(defmethod consume-unused-results ((self connection))
-  "If a client attempts to release a connection without consuming all the 
-   results then we take care of that for them.  Because we are probably 
-   being called from release don't also auto-release when we reach the 
-   last result!"
-  (loop while (next-result-set self :dont-release t)))
+(defgeneric consume-unused-results (self)
+  (:method ((self connection))
+    "If a client attempts to release a connection without consuming all the 
+     results then we take care of that for them.  Because we are probably 
+     being called from release don't also auto-release when we reach the 
+     last result!"
+    (loop while (next-result-set self :dont-release t))))
 
-(defmethod return-or-close ((self connection-pool) (conn connection))
-  "Given a pool and a connection, close it if there are more than 
-   min-connections or return it to the pool if we have less than or equal 
-   to min-connections"
+(defgeneric return-or-close (self conn)
+  (:method ((self connection-pool) (conn connection))
+    "Given a pool and a connection, close it if there are more than 
+     min-connections or return it to the pool if we have less than or equal 
+     to min-connections"
 
-  ;; These don't strictly need to be locked because we make no guarantees
-  ;; about the thread safety of a single connection
-  (unless (null-pointer-p (result-set conn))
-    (mysql-free-result (result-set conn)))
-  (setf (slot-value conn 'result-set) (null-pointer))
-  (setf (result-set-fields conn) nil)
-  (setf (use-query-active conn) nil)
-  (with-lock (pool-lock self)
-    (let ((total (count-connections self)))
-      (if (> total (min-connections self))
-          (disconnect-from-server self conn)
-          (return-to-available conn))
-      (clean-connections self (connections self))
-      (clean-connections self (available-connections self))))
-  (pool-notify self))
+    ;; These don't strictly need to be locked because we make no guarantees
+    ;; about the thread safety of a single connection
+    (unless (null-pointer-p (result-set conn))
+      (mysql-free-result (result-set conn)))
+    (setf (slot-value conn 'result-set) (null-pointer))
+    (setf (result-set-fields conn) nil)
+    (setf (use-query-active conn) nil)
+    (with-lock (pool-lock self)
+      (let ((total (count-connections self)))
+        (if (> total (min-connections self))
+            (disconnect-from-server self conn)
+            (return-to-available conn))
+        (clean-connections self (connections self))
+        (clean-connections self (available-connections self))))
+    (pool-notify self)))
 
 
 (defmethod release ((self connection) &optional conn)
@@ -326,8 +343,9 @@
    it will re-allocate upto min-connections before servicing your request."
   (disconnect-all database))
 
-(defmethod disconnect-all ((self connection-pool))
-  "Disconnects all the connections in the pool from the database."
-  (let ((array (subseq (connections self) 0)))
-    (loop for conn across array
-          do (disconnect-from-server self conn))))
+(defgeneric disconnect-all (self)
+  (:method ((self connection-pool))
+    "Disconnects all the connections in the pool from the database."
+    (let ((array (subseq (connections self) 0)))
+      (loop for conn across array
+            do (disconnect-from-server self conn)))))

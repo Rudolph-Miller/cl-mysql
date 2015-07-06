@@ -477,9 +477,7 @@
   "Return the nth-row of the nth-result set."
   (let ((row (nth n (first (nth (or nth-result-set 0)
                                 result-set-list)))))
-    (typecase row
-      (number row)
-      (t row))))
+    row))
 
 (defmacro with-rows ((var-row query-string
                       &key

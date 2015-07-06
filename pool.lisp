@@ -189,34 +189,35 @@
         (clean-connections self (available-connections self))
         (values first)))))
 
-(defmethod aquire ((self t) (block t))
-  (error 'cl-mysql-error :message "There is no available pool to aquire from!"))
+(defgeneric aquire (self block)
+  (:method ((self t) (block t))
+    (error 'cl-mysql-error :message "There is no available pool to aquire from!"))
 
-(defmethod aquire ((self connection-pool) (block t))
-  "Aquire from the pool a single connection object that can be passed to higher 
-   level API functions like QUERY.   
+  (:method ((self connection-pool) (block t))
+    "Aquire from the pool a single connection object that can be passed to higher
+     level API functions like QUERY.
 
-   On implementations that support threading this method will block if :block 
-   is T, and available connections is 0  and there are already max-connections.   
-   On implementations that do not support threading this method will always 
-   return NIL."
-  (let ((candidate (take-first self)))
-    (if (not  candidate)
-        (if block
-            (loop until candidate
-                  ;; The exact behaviour of pool-wait is implementation
-                  ;; dependent.   Some implementations will sleep some
-                  ;; will wait on a condition variable.
-                  do (pool-wait self)
-                     (setf candidate (take-first self)))
-            (error 'cl-mysql-error :message "Can't allocate any more connections!")))
-    (values candidate)))
+     On implementations that support threading this method will block if :block
+     is T, and available connections is 0  and there are already max-connections.
+     On implementations that do not support threading this method will always
+     return NIL."
+    (let ((candidate (take-first self)))
+      (if (not  candidate)
+          (if block
+              (loop until candidate
+                    ;; The exact behaviour of pool-wait is implementation
+                    ;; dependent.   Some implementations will sleep some
+                    ;; will wait on a condition variable.
+                    do (pool-wait self)
+                       (setf candidate (take-first self)))
+              (error 'cl-mysql-error :message "Can't allocate any more connections!")))
+      (values candidate)))
 
-(defmethod aquire ((self connection) block)
-  (declare (ignore block))
-  (unless (in-use self)
-    ;; Block on in-use?
-    self))
+  (:method ((self connection) block)
+    (declare (ignore block))
+    (unless (in-use self)
+      ;; Block on in-use?
+      self)))
 
 (defgeneric contains (self array conn)
   (:method ((self connection-pool) array conn)

@@ -24,9 +24,9 @@
 ;;;;
 (asdf:defsystem #:cl-mysql-test
   :depends-on (#:cl-mysql
-	       #:stefil)
+               #:stefil)
   :components ((:file "test")
                (:file "test-pool")
-	       (:file "test-prepare")
+               (:file "test-prepare")
                (:file "integration-test"))
   :serial t)

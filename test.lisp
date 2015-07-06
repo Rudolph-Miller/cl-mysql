@@ -81,9 +81,9 @@
       (is (string= "1" (extract-field ptr 0 1 *type-map* '("one" :VARCHAR 0))))
       (is (string= "1" (extract-field ptr 0 1 *type-map* '("one" :BLOB 16))))
       (is (equalp (make-array 1 :initial-element (char-code #\1))
-		  (extract-field ptr 0 1 *type-map* '("bit" :BIT 0))))
+                  (extract-field ptr 0 1 *type-map* '("bit" :BIT 0))))
       (is (equalp (make-array 1 :initial-element (char-code #\1))
-		  (extract-field ptr 0 1 *type-map* '("bit" :BLOB 128))))
+                  (extract-field ptr 0 1 *type-map* '("bit" :BLOB 128))))
       (setf (cffi:mem-ref ptr :pointer) (cffi:null-pointer))
       (is (null (extract-field ptr 0 0 *type-map* '("space" :VARCHAR 0))))
       (is (null (extract-field ptr 0 0 *type-map* '("bit" :BIT 0)))))))
@@ -92,18 +92,17 @@
   (is (eq nil (string-to-universal-time nil)))
   (is (eq nil (string-to-universal-time "")))
   (is (eq nil (string-to-universal-time "0000-00-00 00:00:00")))
-  (is (eql 1
-	  (- (string-to-universal-time "2009-01-01 00:00:00")
-	     (string-to-universal-time "2008-12-31 23:59:59")))))
+  (is (eql 1 (- (string-to-universal-time "2009-01-01 00:00:00")
+                (string-to-universal-time "2008-12-31 23:59:59")))))
 
 
 (deftest test-string-to-ratio  ()
   (is (eq nil (string-to-ratio nil 1)))
   (is (eq nil (string-to-ratio "" 0)))
   (is (equal (/ 123123123 100000000)
-	     (string-to-ratio "1.23123123" 1)))
+             (string-to-ratio "1.23123123" 1)))
   (is (equal -1.23123123d0 
-	     (coerce (string-to-ratio "-1.23123123" 1) 'double-float)))
+             (coerce (string-to-ratio "-1.23123123" 1) 'double-float)))
   (is (eql 99999 (string-to-ratio "99999" 1)))
   (is (eql (/ 1 10) (string-to-ratio "0.1" 1))))
 
@@ -204,19 +203,17 @@
     (is (string= "small" (nth 29 result)))
     (is (string= "one,two" (nth 30 result)))
     (is (equalp #(0 0 0 0 1 1 0 0 0 0 0 0 0 0 0 240 63 0 0 0 0 0 0 240 63)
-		(nth 31 result))))
+                (nth 31 result))))
   (query "DROP DATABASE cl_mysql_test")
   (disconnect))
- 
+
 (deftest test-escape-string ()
   (connect :host *host* :user *user* :password *password*)
   (is (eq nil (escape-string nil)))
   (is (string= "" (escape-string "")))
   (is (string= "\\\"" (escape-string "\"")))
   (is (string= "\\\'" (escape-string "'")))
-  (is (string= "\\n\\r" (escape-string (format nil "~C~C"
-					    (code-char 10)
-					    (code-char 13)))))
+  (is (string= "\\n\\r" (escape-string (format nil "~C~C" (code-char 10) (code-char 13)))))
   (disconnect))
 
 (deftest test-nth-row ()
@@ -234,22 +231,22 @@
   (let ((conn (query "SELECT * FROM X; SELECT * FROM X" :store nil)))
     (let ((total-rows 0))
       (do ((result-set (next-result-set conn) (next-result-set conn)))
-	  ((null result-set))
-	(incf total-rows
-	      (do ((row (next-row conn) (next-row conn))
-		   (nrows 0 (incf nrows)))
-		  ((null row) nrows))))
+          ((null result-set))
+        (incf total-rows
+              (do ((row (next-row conn) (next-row conn))
+                   (nrows 0 (incf nrows)))
+                  ((null row) nrows))))
       (is (eql 4 total-rows))))
-    ;; Now do it again using a loop style, the code is equivalent.   This just documents
-    ;; the two idioms for processing result sets.
-    (let ((conn (query "SELECT * FROM X; SELECT * FROM X" :store nil)))
-      (unwind-protect 
-	   (is (eql 4 (loop while (next-result-set conn)
-			 summing (loop for row = (next-row conn)
-				    until (null row)
-				    count row))))))
-    ;; Now do it once more to verify we haven't got any result sets left open ...
-    (is (eql 2  (length (query "SELECT * FROM X; SELECT * FROM X" :store t))))
+  ;; Now do it again using a loop style, the code is equivalent.   This just documents
+  ;; the two idioms for processing result sets.
+  (let ((conn (query "SELECT * FROM X; SELECT * FROM X" :store nil)))
+    (unwind-protect
+         (is (eql 4 (loop while (next-result-set conn)
+                          summing (loop for row = (next-row conn)
+                                        until (null row)
+                                        count row))))))
+  ;; Now do it once more to verify we haven't got any result sets left open ...
+  (is (eql 2  (length (query "SELECT * FROM X; SELECT * FROM X" :store t))))
   (query "DROP DATABASE cl_mysql_test")
   (disconnect)
   (values))
@@ -263,11 +260,11 @@
   (use "cl_mysql_test")
   (query "CREATE TABLE X ( X INT ); INSERT INTO X (X) VALUES (10)")
   (let ((a (query "USE cl_mysql_test; SELECT * FROM X" :store nil))
-	(b (query "USE cl_mysql_test; SELECT * FROM X" :store nil)))
+        (b (query "USE cl_mysql_test; SELECT * FROM X" :store nil)))
     (next-result-set a) (next-result-set a)
     (next-result-set b) (next-result-set b)
     (is (eql 100 (* (car (next-row a))
-		    (car (next-row b)))))
+                    (car (next-row b)))))
     ;; Early release!
     (release a)
     (release b)

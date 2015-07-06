@@ -66,8 +66,8 @@
                       (mp:process-wait "Joining ..." (lambda ()
                                                        (not (mp:process-alive-p p))))) threads)
   #-(or sb-thread allegro) (loop for th in threads
-				 do (loop until (not (thread-alive-p th))
-				       do (sleep *sleep-period*))))
+                                 do (loop until (not (thread-alive-p th))
+                                          do (sleep *sleep-period*))))
 
 (defmacro with-lock (lock &body body)
   #+sb-thread `(sb-thread:with-recursive-lock (,lock) ,@body)
@@ -82,29 +82,31 @@
                                        (sleep n)
                                        (funcall fn)))
   #+(and clisp mt) (mt:make-thread (lambda ()
-			    (sleep n)
-			    (funcall fn)) nil)
+                                     (sleep n)
+                                     (funcall fn))
+                                   nil)
   #+armedbear (ext:make-thread (lamba ()
-				      (sleep n)
-				      (funcall fn)) :name nil)
+                                      (sleep n)
+                                      (funcall fn))
+                               :name nil)
   #+(or allegro ecl) (mp:process-run-function nil (lambda ()
-						    (sleep n)
-						    (funcall fn))))
-    
+                                                    (sleep n)
+                                                    (funcall fn))))
+
 (defun pool-wait (pool)
   ;; With SBCL threads we can use condition variables to wake us up 
   #+sb-thread (sb-thread:with-mutex ((wait-queue-lock pool))
-                                    (sb-thread:condition-wait (wait-queue pool) 
-                                                              (wait-queue-lock pool)))
+                (sb-thread:condition-wait (wait-queue pool)
+                                          (wait-queue-lock pool)))
   ;; With Allegro CL we will use the process-wait to run a monitor thread
   ;; on the condition
   #+allegro (mp:process-wait "Waiting for pool" #'can-aquire-lock pool)
   #+(and clisp mt) (mt:exemption-wait (wait-queue pool)
-			     (wait-queue-lock pool))
+                                      (wait-queue-lock pool))
   #-(or allegro sb-thread (and clisp mt)) (sleep *sleep-period*))
 
 (defun pool-notify (pool)
   #+(and clisp mt) (mt:exemption-signal (wait-queue pool))
   #+sb-thread (sb-thread:with-mutex ((wait-queue-lock pool))
-                                    (sb-thread:condition-notify (wait-queue pool))))
+                (sb-thread:condition-notify (wait-queue pool))))
 

@@ -60,46 +60,46 @@
 
   (declare (optimize (speed 3)))
   (cond ((null-pointer-p (result-set self))
-	 (cons (mysql-affected-rows (pointer self)) nil))
-	(t
-	 (result-data self type-map))))
+         (cons (mysql-affected-rows (pointer self)) nil))
+        (t
+         (result-data self type-map))))
 
 (defmethod set-field-names-and-types ((self connection))
   "Retrieve from a MYSQL_RES a list of cons ((<field name> <field type>)*) "
   (let ((mysql-res (result-set self)))
     (if (null-pointer-p mysql-res)
-	(setf (result-set-fields self)
-	      (append (list nil) (result-set-fields self)))
-	(let* ((num-fields (1- (mysql-num-fields mysql-res)))
-	       (fields (mysql-fetch-fields mysql-res))
-	       (extracted-fields
-		(loop for i from 0 to num-fields
-		   collect (let ((mref (mysql-fetch-field mysql-res)))
-			     (list
-			      (foreign-slot-value mref 'mysql-field 'name)
-			      (foreign-enum-keyword
-			       'enum-field-types
-			       (foreign-slot-value mref 'mysql-field 'type))
-			      (foreign-slot-value mref 'mysql-field 'flags))))))
-	  (setf (result-set-fields self)
-		(append
-		 (list extracted-fields)
-		 (result-set-fields self)))))))
+        (setf (result-set-fields self)
+              (append (list nil) (result-set-fields self)))
+        (let* ((num-fields (1- (mysql-num-fields mysql-res)))
+               (fields (mysql-fetch-fields mysql-res))
+               (extracted-fields
+                 (loop for i from 0 to num-fields
+                       collect (let ((mref (mysql-fetch-field mysql-res)))
+                                 (list
+                                  (foreign-slot-value mref 'mysql-field 'name)
+                                  (foreign-enum-keyword
+                                   'enum-field-types
+                                   (foreign-slot-value mref 'mysql-field 'type))
+                                  (foreign-slot-value mref 'mysql-field 'flags))))))
+          (setf (result-set-fields self)
+                (append
+                 (list extracted-fields)
+                 (result-set-fields self)))))))
 
 (defmethod result-data ((self connection) type-map)
   "Internal function that processes a result set and returns all the data.
    If field-names-and-types is NIL the raw (string) data is returned"
   (declare (optimize (speed 3))
-	   (ftype (function (t t fixnum list (or t null)) list) process-row))
+           (ftype (function (t t fixnum list (or t null)) list) process-row))
   (let* ((mysql-res (result-set self))
-	 (num-fields (mysql-num-fields mysql-res)))
+         (num-fields (mysql-num-fields mysql-res)))
     (loop for row = (mysql-fetch-row mysql-res)
-       until (null-pointer-p row)
-       collect (process-row mysql-res
-			    row
-			    num-fields
-			    (car (result-set-fields self))
-			    type-map))))
+          until (null-pointer-p row)
+          collect (process-row mysql-res
+                               row
+                               num-fields
+                               (car (result-set-fields self))
+                               type-map))))
 
 (defmethod next-result-set ((self connection) &key dont-release store)
   "Position for the the next result set.  Returns T if there is a result
@@ -125,7 +125,7 @@
    ...</code></pre>
 "
   (let ((last-result (result-set self))
-	(affected-rows 0))
+        (affected-rows 0))
     ;; Firstly free any prior results
     (unless (null-pointer-p last-result)
       (setf affected-rows (mysql-affected-rows (pointer self)))
@@ -134,15 +134,15 @@
     ;; Now check if this is not the first result whether there are
     ;; more results
     (if (and (> (length (result-set-fields self)) 0)
-	     (not (eql 0 (mysql-next-result (pointer self)))))
-	(progn (unless dont-release
-		 (return-or-close (owner-pool self) self))
-	       (return-from next-result-set
-		 (values nil affected-rows))))
+             (not (eql 0 (mysql-next-result (pointer self)))))
+        (progn (unless dont-release
+                 (return-or-close (owner-pool self) self))
+               (return-from next-result-set
+                 (values nil affected-rows))))
     ;; Now advance into the next result set.
     (let ((result-set (if store
-			   (mysql-store-result (pointer self))
-			   (mysql-use-result (pointer self)))))
+                          (mysql-store-result (pointer self))
+                          (mysql-use-result (pointer self)))))
       (error-if-null-with-fields self result-set)
       (setf (result-set self) result-set)
       (values t affected-rows))))
@@ -152,12 +152,12 @@
    function will return NIL when the last row has been retrieved."
   (unless (null-pointer-p (result-set self))
     (let* ((fields-and-names (car (result-set-fields self)))
-	   (row (mysql-fetch-row (result-set self))))
+           (row (mysql-fetch-row (result-set self))))
       (if (null-pointer-p row)
-	  (error-if-set self)
-	  (process-row (result-set self) row
-		       (length fields-and-names)
-		       fields-and-names type-map)))))
+          (error-if-set self)
+          (process-row (result-set self) row
+                       (length fields-and-names)
+                       fields-and-names type-map)))))
 
 (defmethod connection-equal ((self t) (other t))
   nil)

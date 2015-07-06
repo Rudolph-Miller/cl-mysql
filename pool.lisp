@@ -136,18 +136,18 @@
    time a connection is acquired from the pool."
   ;; Mutex
   (loop for i from 0 to (1- (- min n))
-     do (connect-to-server self)))
+        do (connect-to-server self)))
 
 (defmethod initialize-instance :after ((self connection-pool) &rest initargs)
   "The connection arrays need to be set-up after the pool is created."
   (declare (ignore initargs))
   (setf (connections self) (make-array (max-connections self)
-				       :fill-pointer 0
-				       :adjustable t))
+                                       :fill-pointer 0
+                                       :adjustable t))
   (setf (available-connections self) (make-array
-				      (max-connections self)
-				      :fill-pointer 0
-				      :adjustable t))
+                                      (max-connections self)
+                                      :fill-pointer 0
+                                      :adjustable t))
   (connect-upto-minimum self  0 (min-connections self)))
 
 
@@ -166,14 +166,13 @@
       (connect-upto-minimum self total
                             (if (> available 0)
                                 (min-connections self)
-                              (min 
-                               (max-connections self)
-                               (1+ total)))))
+                                (min (max-connections self)
+                                     (1+ total)))))
     ;; There now must be a connection available in the pool, so find the
     ;; first one and lock it.
     (let ((first (loop for conn across (connections self)
-                     if (and conn (available conn))
-                     return conn)))
+                       if (and conn (available conn))
+                         return conn)))
       (toggle first)
       (remove-connection-from-array self (available-connections self) first)
       (clean-connections self (available-connections self))
@@ -194,12 +193,11 @@
     (if (not  candidate)
         (if block
             (loop until candidate
-                  do (progn
-                    ;; The exact behaviour of pool-wait is implementation
-                    ;; dependent.   Some implementations will sleep some
-                    ;; will wait on a condition variable.
-                    (pool-wait self)
-                    (setf candidate (take-first self))))
+                  ;; The exact behaviour of pool-wait is implementation
+                  ;; dependent.   Some implementations will sleep some
+                  ;; will wait on a condition variable.
+                  do (pool-wait self)
+                     (setf candidate (take-first self)))
             (error 'cl-mysql-error :message "Can't allocate any more connections!")))
     (values candidate)))
 
@@ -211,8 +209,8 @@
 
 (defmethod contains ((self connection-pool) array conn)
   (loop for c across array
-       if (connection-equal c conn)
-       return t))
+        if (connection-equal c conn)
+          return t))
 
 (defmethod return-to-available ((self connection) &optional conn)
   (declare (ignore conn))
@@ -220,23 +218,23 @@
   (return-to-available (owner-pool self) self)
   ;; Now clean up any stateful data that could be hanging around
   (setf (result-set self) (null-pointer)
-	(result-set-fields self) nil
-	(in-use self) nil))
-  
+        (result-set-fields self) nil
+        (in-use self) nil))
+
 (defmethod return-to-available ((self connection-pool) &optional conn)
   "If the connection is not in the expected state raise an error."
   (if (or (not (in-use conn))
-	  (contains self (available-connections self) conn))
+          (contains self (available-connections self) conn))
       (error 'cl-mysql-error :message
-	     "Inconsistent state! Connection is not currently in use."))
+             "Inconsistent state! Connection is not currently in use."))
   (vector-push-extend conn (available-connections self)))
 
 (defmethod clean-connections ((self connection-pool) array)
   "Housekeeping to remove null connections from the end of the connections 
    array.   Pool should be locked."
   (setf (fill-pointer array)
-	(do ((i (1- (fill-pointer array)) (decf i)))
-	    ((or (< i 0) (elt array i)) (1+ i)))))
+        (do ((i (1- (fill-pointer array)) (decf i)))
+            ((or (< i 0) (elt array i)) (1+ i)))))
 
 (defmethod consume-unused-results ((self connection))
   "If a client attempts to release a connection without consuming all the 
@@ -260,8 +258,8 @@
   (with-lock (pool-lock self)
     (let ((total (count-connections self)))
       (if (> total (min-connections self))
-	  (disconnect-from-server self conn)
-	  (return-to-available conn))
+          (disconnect-from-server self conn)
+          (return-to-available conn))
       (clean-connections self (connections self))
       (clean-connections self (available-connections self))))
   (pool-notify self))
@@ -281,10 +279,10 @@
   (values))
 
 (defun connect (&key host user password database port socket
-		(client-flag (list +client-compress+
-				   +client-multi-statements+
-				   +client-multi-results+))
-		(min-connections 1) (max-connections 1))
+                  (client-flag (list +client-compress+
+                                     +client-multi-statements+
+                                     +client-multi-results+))
+                  (min-connections 1) (max-connections 1))
   "Connect will present to MySQL sensible defaults for all the connection items.
    The following code will attach you to a MySQL instance running on localhost, 
    as the current user with no password.   It will automatically turn on 
@@ -310,16 +308,17 @@
 
    The last  allocated pool object is placed into a special variable 
    <strong>*last-database*</strong> which is defaulted from the higher level API functions."
-  (setf *last-database* (make-instance 'connection-pool
-				       :hostname host
-				       :username user
-				       :password password
-				       :database database
-				       :port port
-				       :socket socket
-				       :flags (reduce #'logior client-flag)
-				       :min-connections min-connections
-				       :max-connections max-connections)))
+  (setf *last-database*
+        (make-instance 'connection-pool
+                       :hostname host
+                       :username user
+                       :password password
+                       :database database
+                       :port port
+                       :socket socket
+                       :flags (reduce #'logior client-flag)
+                       :min-connections min-connections
+                       :max-connections max-connections)))
 
 (defun disconnect (&optional (database *last-database*))
   "This method will disconnect all the connections in the pool.  Note
@@ -331,4 +330,4 @@
   "Disconnects all the connections in the pool from the database."
   (let ((array (subseq (connections self) 0)))
     (loop for conn across array
-       do (disconnect-from-server self conn))))
+          do (disconnect-from-server self conn))))

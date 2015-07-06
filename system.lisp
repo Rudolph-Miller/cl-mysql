@@ -206,26 +206,26 @@
    CL-USER> (disconnect)
    Closing!"
   (let* ((n name)
-	 (int-name internal-name)
-	 (int-libname (intern (string-upcase
-			       (format nil "lib~A" int-name))))
-	 (docstring (format nil "Library wrapper for MySQL function: ~A" name))
-	 (mysql-doc-ref (format nil *mysql-dev-api-url* (string-downcase  int-name)))
-	 (arg-names (mapcar #'car args)))
+         (int-name internal-name)
+         (int-libname (intern (string-upcase
+                               (format nil "lib~A" int-name))))
+         (docstring (format nil "Library wrapper for MySQL function: ~A" name))
+         (mysql-doc-ref (format nil *mysql-dev-api-url* (string-downcase  int-name)))
+         (arg-names (mapcar #'car args)))
     (if *generate-alt-fns*
-	`(progn  (defcfun (,n ,int-libname) ,return-type
-		   ,mysql-doc-ref
-		   ,@args)
-		 (defun ,int-name ,arg-names
-		   ,docstring
-		   (let ((alt-fn (get ',int-name 'alt-fn)))
-		     (if alt-fn
-			 (funcall alt-fn ,@arg-names)
-			 (,int-libname ,@arg-names)))))
-	`(defcfun (,n ,int-name) ,return-type
-	   ,mysql-doc-ref
-	   ,@args))))
- 
+        `(progn  (defcfun (,n ,int-libname) ,return-type
+                   ,mysql-doc-ref
+                   ,@args)
+                 (defun ,int-name ,arg-names
+                   ,docstring
+                   (let ((alt-fn (get ',int-name 'alt-fn)))
+                     (if alt-fn
+                         (funcall alt-fn ,@arg-names)
+                         (,int-libname ,@arg-names)))))
+        `(defcfun (,n ,int-name) ,return-type
+           ,mysql-doc-ref
+           ,@args))))
+
 (defmysqlfun ("mysql_init" mysql-init) :pointer
   (mysql :pointer))
 

@@ -31,25 +31,19 @@
   :licence "MIT"
   :in-order-to ((test-op (load-op cl-mysql-test)))
   :perform (test-op :after (op c)
-		    (describe
-		     (funcall
-		      (intern "TEST" :cl-mysql-test))))
+                    (describe
+                     (funcall
+                      (intern "TEST" :cl-mysql-test))))
   :serial t
   :components ((:file "system")
-	       (:file "thread")
-	       (:file "connection")
-	       (:file "pool")
-	       (:file "prepare")
-	       (:file "mysql")
-	       (:file "package"))
+               (:file "thread")
+               (:file "connection")
+               (:file "pool")
+               (:file "prepare")
+               (:file "mysql")
+               (:file "package"))
   :depends-on (#:cffi))
 
 (defmethod operation-done-p 
-           ((o test-op)
-            (c (eql (find-system 'cl-mysql)))))
-
-
-
-
-  
-  
+    ((o test-op)
+     (c (eql (find-system 'cl-mysql)))))
